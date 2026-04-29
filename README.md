@@ -122,6 +122,32 @@ This dashboard helps answer questions such as:
 
 That is the difference between simple event logging and product analytics.
 
+## Screenshots
+
+### 1. Full Dashboard Overview
+
+![Dashboard](screenshots/Dashboard.PNG)
+
+
+
+### 2. Search Results Experience
+
+![Search results](screenshots/search_result.PNG)
+
+This view demonstrates how route searches produce immediate ride matches below the search form. It validates the user journey where a search event leads directly to actionable ride options and further interaction events.
+
+### 3. Funnel Analytics
+
+![Funnel analytics](screenshots/funnel.PNG)
+
+This image highlights the funnel section that compares key behavior stages. It helps explain conversion health by showing how many searches lead to bookings and how cancellations affect outcomes.
+
+### 4. Route Analytics
+
+![Route analytics](screenshots/Route_Analytics.PNG)
+
+This screenshot focuses on route-level performance. It is useful for identifying high-demand routes, weaker conversion routes, and places where cancellations may require pricing or UX improvements.
+
 ## How To Run
 
 1. Install dependencies.
