@@ -35,6 +35,7 @@ const fallbackSeriesByPeriod: TimeSeriesByPeriod = {
 
 export default function App() {
   const [filters, setFilters] = useState<SearchFilters>({ from: 'Vestal, NY', to: 'Ithaca, NY' });
+  const [lastSearchedRoute, setLastSearchedRoute] = useState<string>('Vestal, NY → Ithaca, NY');
   const [rideCatalog, setRideCatalog] = useState<RideOption[]>([]);
   const [visibleRides, setVisibleRides] = useState<RideOption[]>([]);
   const [summary, setSummary] = useState<DashboardSummary>(fallbackSummary);
@@ -75,30 +76,92 @@ export default function App() {
 
   const topRoutes = useMemo(() => routes.slice(0, 5), [routes]);
   const selectedSeries = seriesByPeriod[timePeriod];
-  const topInsight = insights[0];
   const routeInsight = useMemo(() => {
-    const trimmedFrom = filters.from.trim().toLowerCase();
-    const trimmedTo = filters.to.trim().toLowerCase();
-    const routeLabel = visibleRides[0] ? `${visibleRides[0].from} → ${visibleRides[0].to}` : '';
+    const target = lastSearchedRoute.trim().toLowerCase();
+    const exactMatch = routes.find((route) => route.route.toLowerCase() === target);
+    if (exactMatch) {
+      return exactMatch;
+    }
 
-    if (routeLabel.length > 0) {
-      const exactMatch = routes.find((route) => route.route === routeLabel);
-      if (exactMatch) {
-        return exactMatch;
+    return undefined;
+  }, [lastSearchedRoute, routes]);
+
+  const routeInsightSeverity = useMemo<InsightCard['severity']>(() => {
+    if (!routeInsight) {
+      return 'medium';
+    }
+
+    if (routeInsight.cancellations >= 2 && routeInsight.cancellations >= routeInsight.bookings) {
+      return 'high';
+    }
+
+    if (routeInsight.searches >= 3 && routeInsight.conversionRate < 0.35) {
+      return 'high';
+    }
+
+    if (routeInsight.searches >= 3 && routeInsight.conversionRate < 0.6) {
+      return 'medium';
+    }
+
+    return 'low';
+  }, [routeInsight]);
+
+  const highImpactInsight = useMemo<InsightCard>(() => {
+    if (routeInsight) {
+      if (routeInsight.cancellations >= 2 && routeInsight.cancellations >= routeInsight.bookings) {
+        return {
+          title: 'Route-level cancellation risk',
+          detail: `${routeInsight.route} has cancellations at or above bookings. Focus on route confidence, pricing clarity, and cancellation friction.`,
+          severity: 'high'
+        };
+      }
+
+      if (routeInsight.searches >= 3 && routeInsight.conversionRate < 0.35) {
+        return {
+          title: 'Route-level conversion gap',
+          detail: `${routeInsight.route} has meaningful search demand but low booking completion. Strengthen trust and simplify checkout for this route.`,
+          severity: 'high'
+        };
+      }
+
+      if (routeInsight.searches >= 3 && routeInsight.conversionRate >= 0.7) {
+        return {
+          title: 'Route performing strongly',
+          detail: `${routeInsight.route} is converting well. This route is a candidate for supply scaling and promotional prioritization.`,
+          severity: 'low'
+        };
       }
     }
 
-    return routes.find((route) => {
-      const normalizedRoute = route.route.toLowerCase();
-      return normalizedRoute.includes(trimmedFrom) || normalizedRoute.includes(trimmedTo);
-    });
-  }, [filters.from, filters.to, routes, visibleRides]);
+    if (summary.cancellationRate > 0.4 && summary.totalCancellations >= 4) {
+      return {
+        title: 'Possible pricing or UX issue',
+        detail: 'A large share of bookings are being canceled. That usually points to a price surprise, weak route confidence, or a confusing post-booking experience.',
+        severity: 'high'
+      };
+    }
+
+    if (summary.conversionRate < 0.35 && summary.totalSearches >= 20) {
+      return {
+        title: 'High demand but low conversion',
+        detail: 'Search volume is healthy, but bookings are lagging. Consider reducing friction in booking and improving value communication.',
+        severity: 'high'
+      };
+    }
+
+    return insights[0] ?? {
+      title: 'Behavior looks healthy',
+      detail: 'No urgent anomaly is currently dominant in the event stream.',
+      severity: 'low'
+    };
+  }, [insights, routeInsight, summary.cancellationRate, summary.conversionRate, summary.totalCancellations, summary.totalSearches]);
 
   async function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedFrom = filters.from.trim();
     const trimmedTo = filters.to.trim();
+    setLastSearchedRoute(`${trimmedFrom} → ${trimmedTo}`);
     const normalizedFrom = trimmedFrom.toLowerCase();
     const normalizedTo = trimmedTo.toLowerCase();
     const ridesToShow = rideCatalog.filter((ride) => {
@@ -189,25 +252,24 @@ export default function App() {
         <div className="section-heading">
           <p className="eyebrow">Search Results</p>
           <h2>Rides matching your search</h2>
-          <p className="section-copy">These results appear immediately after you search, before the analytics sections.</p>
         </div>
 
         <div className="insight-grid search-insight-grid">
-          <article className="insight-card high insight-focus">
+          <article className={`insight-card ${highImpactInsight.severity} insight-focus`}>
             <p className="eyebrow inline">High impact insight</p>
-            <h3>{topInsight?.title ?? 'No insight yet'}</h3>
-            <p>{topInsight?.detail ?? 'Search and booking activity will surface the top pattern here.'}</p>
+            <h3>{highImpactInsight.title}</h3>
+            <p>{highImpactInsight.detail}</p>
           </article>
 
-          <article className="insight-card medium insight-focus">
+          <article className={`insight-card ${routeInsightSeverity} insight-focus`}>
             <p className="eyebrow inline">Route insight</p>
-            <h3>{routeInsight ? routeInsight.route : 'Search a route to see route-specific behavior'}</h3>
+            <h3>{routeInsight ? routeInsight.route : lastSearchedRoute}</h3>
             {routeInsight ? (
               <p>
                 {routeInsight.searches} searches, {routeInsight.bookings} bookings, {routeInsight.cancellations} cancellations, {formatPercent(routeInsight.conversionRate)} conversion.
               </p>
             ) : (
-              <p>The selected route will show how often riders search, book, and cancel that specific trip.</p>
+              <p>No route analytics yet for this exact route. Search and interact with rides to generate route-specific behavior.</p>
             )}
           </article>
         </div>
@@ -279,18 +341,6 @@ export default function App() {
             {topRoutes.map((route) => (
               <RouteRow key={route.route} route={route} />
             ))}
-          </div>
-        </article>
-
-        <article className="dashboard-card ride-list-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Time Scale Notes</p>
-            <h2>What the time view shows</h2>
-          </div>
-          <div className="session-notes">
-            <p>Days show short-term spikes from the latest searches and bookings.</p>
-            <p>Weeks smooth out the noise and show the repeating demand pattern.</p>
-            <p>Months and years show how the catalog behaves over longer windows.</p>
           </div>
         </article>
       </section>

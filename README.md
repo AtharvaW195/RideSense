@@ -2,6 +2,8 @@
 
 Ride Analytics & Insights Dashboard is a simple full-stack TypeScript system that collects ride-search events and turns them into a live analytics dashboard. The project is built to satisfy the assignment goal of showing how event tracking, aggregation, and visualization can work together in one clean app.
 
+The Demo is uploaded here :- https://youtu.be/ZllMcgAiS34
+
 ## Overview
 
 The system simulates a ride-sharing product. A user searches for a route, sees matching trips, opens a ride card, books or cancels, and the system records each action as an event. Those events are stored in memory, aggregated on the server, and rendered in the dashboard as metrics, route analysis, trend charts, and heuristic insights.
@@ -96,8 +98,9 @@ The insights engine highlights behavior patterns using simple heuristics. The da
 
 - One high-impact insight for the overall system
 - One route-specific insight for the currently selected or most relevant route
+- Severity-driven card styling (`high`, `medium`, `low`) so insight urgency is visible at a glance
 
-These cards help explain what the data means rather than only showing raw counts.
+Both the high-impact card and the route insight card automatically change color based on the current severity level, which makes changes easier to see during a live demo.
 
 ## Mock Data Design
 
